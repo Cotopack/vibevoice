@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Voice Roulette - Только Голос</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PeerJS WebRTC Library -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; user-select: none; }
+        .pulse-ring {
+            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+            animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        @keyframes pulse-ring {
+            to { box-shadow: 0 0 0 30px rgba(99, 102, 241, 0); }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-hidden bg-slate-950 text-slate-100">
+
+    <!-- Audio Element for Remote Voice -->
+    <audio id="remoteAudio" autoplay></audio>
+
+    <!-- Header / Navbar -->
+    <header class="h-16 border-b border-slate-800/80 bg-slate-900/60 px-4 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center space-x-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
+            <span class="font-bold text-base tracking-tight text-white">Voice<span class="text-brand-500">Roulette</span></span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <!-- Connection Indicator -->
+            <div id="peerStatusBadge" class="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs text-slate-300">
+                <span id="peerStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span id="peerStatusText">Подключение...</span>
+            </div>
+            <!-- Exit to Menu Button -->
+            <button id="btnExitMenu" class="hidden px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700/60 transition flex items-center space-x-1">
+                <i class="fa-solid fa-house"></i>
+                <span class="hidden sm:inline">В меню</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Screen 1: Age Selection Menu -->
+    <main id="screenAgeSelect" class="flex-1 flex flex-col justify-center items-center p-4 max-w-md mx-auto w-full space-y-6">
+        <div class="text-center space-y-2">
+            <h2 class="text-2xl font-bold text-white">Голосовая чат-рулетка</h2>
+            <p class="text-xs text-slate-400">Общайтесь с реальными людьми без видео. Выберите вашу возрастную категорию для подбора собеседников:</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 w-full">
+            <button data-age="12-16" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">12 - 16</span>
+                <span class="text-[11px] text-slate-400">Подростки</span>
+            </button>
+            <button data-age="16-18" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">16 - 18</span>
+                <span class="text-[11px] text-slate-400">Молодёжь</span>
+            </button>
+            <button data-age="18-24" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">18 - 24</span>
+                <span class="text-[11px] text-slate-400">Студенты</span>
+            </button>
+            <button data-age="24-30" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">24 - 30</span>
+                <span class="text-[11px] text-slate-400">Взрослые</span>
+            </button>
+            <button data-age="30-40" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">30 - 40</span>
+                <span class="text-[11px] text-slate-400">Опытные</span>
+            </button>
+            <button data-age="40+" class="btn-age p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 hover:bg-slate-800/80 transition flex flex-col items-center space-y-1 group">
+                <span class="text-lg font-bold text-brand-500 group-hover:scale-105 transition">40+</span>
+                <span class="text-[11px] text-slate-400">Старшая группа</span>
+            </button>
+        </div>
+
+        <p id="micPermissionNotice" class="text-[11px] text-amber-400/80 text-center">
+            <i class="fa-solid fa-shield-halved mr-1"></i> При входе требуется разрешить доступ к микрофону
+        </p>
+        
+        <!-- Error Banner inside Age Select Screen -->
+        <div id="errorAlert" class="hidden w-full p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-red-300 text-xs text-center">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="errorAlertText">Ошибка подключения</span>
+        </div>
+    </main>
+
+    <!-- Screen 2: Active Voice Chat Roulette Room -->
+    <main id="screenChat" class="hidden flex-1 flex flex-col justify-between items-center p-4 max-w-lg mx-auto w-full">
+        
+        <!-- Top Info Header -->
+        <div class="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2">
+                <span class="text-slate-400">Категория:</span>
+                <span id="selectedCategoryBadge" class="px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 font-semibold border border-brand-500/30">18-24</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-slate-400">Микрофон:</span>
+                <div class="w-16 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                    <div id="micLevelBar" class="bg-gradient-to-r from-emerald-500 to-brand-500 h-full w-0 transition-all duration-75"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Stage: Status Avatar / Pulse Visualizer -->
+        <div class="flex flex-col items-center justify-center space-y-5 my-auto">
+            <div class="relative">
+                <div id="avatarCircle" class="w-36 h-36 rounded-full bg-slate-900 border-2 border-slate-800 flex items-center justify-center text-4xl text-slate-600 transition-all duration-500">
+                    <i id="avatarIcon" class="fa-solid fa-user-large"></i>
+                </div>
+            </div>
+
+            <div class="text-center space-y-1">
+                <h3 id="chatStatusTitle" class="text-xl font-bold text-white">Режим ожидания</h3>
+                <p id="chatStatusDesc" class="text-xs text-slate-400">Нажмите "Искать собеседника" для начала общения</p>
+            </div>
+        </div>
+
+        <!-- Bottom Controls Dashboard -->
+        <div class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-2xl">
+            
+            <!-- Primary Action Buttons (Search / Skip / Pause) -->
+            <div class="flex items-center gap-2">
+                <button id="btnStartSearch" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-semibold text-sm transition shadow-lg shadow-brand-600/20 active:scale-95 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Искать</span>
+                </button>
+
+                <button id="btnSkip" disabled class="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition border border-slate-700 active:scale-95 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-forward"></i>
+                    <span>Пропустить</span>
+                </button>
+
+                <button id="btnPause" disabled class="py-3 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold border border-amber-500/30 transition flex items-center justify-center space-x-1.5" title="Пауза / Стоп поиска">
+                    <i class="fa-solid fa-pause"></i>
+                    <span class="hidden sm:inline">Пауза</span>
+                </button>
+            </div>
+
+            <!-- Secondary Controls (Mute / Exit Menu) -->
+            <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <!-- Toggle Mic Button -->
+                <button id="btnToggleMic" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700/60 transition flex items-center justify-center space-x-2 mr-2">
+                    <i id="micBtnIcon" class="fa-solid fa-microphone text-emerald-400"></i>
+                    <span id="micBtnText">Микрофон вкл</span>
+                </button>
+
+                <!-- Exit to Menu Button (Mobile Friendly) -->
+                <button id="btnExitMenuBottom" class="py-2.5 px-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium border border-red-500/30 transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Выйти</span>
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="p-3 text-center text-[11px] text-slate-600 border-t border-slate-900 bg-slate-950">
+        VoiceRoulette &copy; Only Audio P2P WebRTC Chat
+    </footer>
+
+    <!-- Firebase SDK (ES Modules / Web script) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            deleteDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'voice-roulette-app';
+        
+        let firebaseConfig = {
+            apiKey: "AIzaSyDemoKeyForPublicMatchmakerOnly",
+            authDomain: "voice-roulette.firebaseapp.com",
+            projectId: "voice-roulette-demo",
+            storageBucket: "voice-roulette.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try { firebaseConfig = JSON.parse(__firebase_config); } catch (e) {}
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- State Management ---
+        const state = {
+            selectedAge: null,
+            localStream: null,
+            peer: null,
+            myPeerId: null,
+            currentCall: null,
+            audioContext: null,
+            analyser: null,
+            isMicMuted: false,
+            isSearching: false,
+            isConnected: false,
+            isPaused: false,
+            user: null,
+            queueUnsub: null
+        };
+
+        // UI Bindings
+        const screenAgeSelect = document.getElementById('screenAgeSelect');
+        const screenChat = document.getElementById('screenChat');
+        const selectedCategoryBadge = document.getElementById('selectedCategoryBadge');
+        
+        const peerStatusDot = document.getElementById('peerStatusDot');
+        const peerStatusText = document.getElementById('peerStatusText');
+        const micLevelBar = document.getElementById('micLevelBar');
+        const remoteAudio = document.getElementById('remoteAudio');
+
+        const avatarCircle = document.getElementById('avatarCircle');
+        const avatarIcon = document.getElementById('avatarIcon');
+        const chatStatusTitle = document.getElementById('chatStatusTitle');
+        const chatStatusDesc = document.getElementById('chatStatusDesc');
+
+        const btnStartSearch = document.getElementById('btnStartSearch');
+        const btnSkip = document.getElementById('btnSkip');
+        const btnPause = document.getElementById('btnPause');
+        const btnToggleMic = document.getElementById('btnToggleMic');
+        const micBtnIcon = document.getElementById('micBtnIcon');
+        const micBtnText = document.getElementById('micBtnText');
+        const btnExitMenu = document.getElementById('btnExitMenu');
+        const btnExitMenuBottom = document.getElementById('btnExitMenuBottom');
+
+        // Authenticate anonymously first
+        signInAnonymously(auth).then((cred) => {
+            state.user = cred.user;
+        }).catch((err) => {
+            console.warn("Auth fallback", err);
+        });
+
+        // Step 1: Selection
+        document.querySelectorAll('.btn-age').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const ageGroup = btn.getAttribute('data-age');
+                state.selectedAge = ageGroup;
+                selectedCategoryBadge.textContent = ageGroup;
+
+                const success = await initAudioStream();
+                if (success) {
+                    screenAgeSelect.classList.add('hidden');
+                    screenChat.classList.remove('hidden');
+                    btnExitMenu.classList.remove('hidden');
+                    initPeerJS();
+                }
+            });
+        });
+
+        async function initAudioStream() {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorAlertText = document.getElementById('errorAlertText');
+            if (errorAlert) errorAlert.classList.add('hidden');
+
+            try {
+                if (state.audioContext && state.audioContext.state === 'suspended') {
+                    await state.audioContext.resume();
+                }
+
+                if (state.localStream) return true;
+
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("Ваш браузер или соединение (не HTTPS) блокирует доступ к микрофону!");
+                }
+
+                try {
+                    state.localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                        video: false
+                    });
+                } catch (fallbackErr) {
+                    state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                }
+
+                setupMicVisualizer(state.localStream);
+                return true;
+            } catch (err) {
+                console.error("Mic access error:", err);
+                if (errorAlert && errorAlertText) {
+                    errorAlertText.textContent = err.message || "Микрофон не найден!";
+                    errorAlert.classList.remove('hidden');
+                }
+                return false;
+            }
+        }
+
+        function setupMicVisualizer(stream) {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                state.audioContext = new AudioContext();
+                const source = state.audioContext.createMediaStreamSource(stream);
+                state.analyser = state.audioContext.createAnalyser();
+                state.analyser.fftSize = 64;
+                source.connect(state.analyser);
+
+                const dataArray = new Uint8Array(state.analyser.frequencyBinCount);
+
+                const updateMeter = () => {
+                    if (!state.analyser || state.isMicMuted) {
+                        micLevelBar.style.width = '0%';
+                    } else {
+                        state.analyser.getByteFrequencyData(dataArray);
+                        let sum = 0;
+                        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                        let avg = sum / dataArray.length;
+                        let pct = Math.min(100, Math.round((avg / 128) * 100));
+                        micLevelBar.style.width = pct + '%';
+                    }
+                    requestAnimationFrame(updateMeter);
+                };
+                updateMeter();
+            } catch (e) {}
+        }
+
+        // Initialize WebRTC Peer
+        function initPeerJS() {
+            setPeerStatus('connecting', 'Сеть...');
+            const safeAgeTag = state.selectedAge.replace('+', 'plus');
+            const randomID = 'vr-' + safeAgeTag + '-' + Math.floor(100000 + Math.random() * 900000);
+
+            state.peer = new Peer(randomID, {
+                debug: 1,
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            state.peer.on('open', (id) => {
+                state.myPeerId = id;
+                setPeerStatus('ready', 'Готов к поиску');
+            });
+
+            state.peer.on('call', (call) => {
+                if (state.isConnected || state.isPaused) {
+                    call.close();
+                    return;
+                }
+
+                removeFromMatchmakingQueue();
+                state.currentCall = call;
+                call.answer(state.localStream);
+
+                call.on('stream', (remoteStream) => {
+                    handleConnectedStream(remoteStream);
+                });
+
+                call.on('close', handleDisconnect);
+                call.on('error', handleDisconnect);
+            });
+
+            state.peer.on('disconnected', () => setPeerStatus('error', 'Отключено'));
+            state.peer.on('error', (err) => setPeerStatus('error', 'Ошибка P2P'));
+        }
+
+        function setPeerStatus(type, text) {
+            peerStatusText.textContent = text;
+            if (type === 'ready') peerStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            else if (type === 'connecting') peerStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            else peerStatusDot.className = 'w-2 h-2 rounded-full bg-red-500';
+        }
+
+        // --- Realtime Firebase Matchmaker ---
+        async function startSearch() {
+            if (!state.peer || !state.myPeerId || state.isConnected) return;
+
+            state.isSearching = true;
+            state.isPaused = false;
+            updateUI();
+
+            setAvatarState('searching');
+            chatStatusTitle.textContent = "Поиск собеседника...";
+            chatStatusDesc.textContent = `Ищем свободных пользователей в группе ${state.selectedAge}`;
+
+            const queueColPath = collection(db, 'artifacts', appId, 'public', 'data', `queue_${state.selectedAge.replace('+', 'plus')}`);
+
+            // 1. Add current user to real-time queue
+            const myQueueDoc = doc(queueColPath, state.myPeerId);
+            await setDoc(myQueueDoc, {
+                peerId: state.myPeerId,
+                timestamp: Date.now()
+            });
+
+            // 2. Listen to active queue snapshot
+            if (state.queueUnsub) state.queueUnsub();
+
+            state.queueUnsub = onSnapshot(queueColPath, (snapshot) => {
+                if (!state.isSearching || state.isConnected) return;
+
+                const candidates = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.peerId !== state.myPeerId) {
+                        candidates.push(data.peerId);
+                    }
+                });
+
+                // Match with first waiting stranger
+                if (candidates.length > 0) {
+                    const targetPeerId = candidates[0];
+                    connectToPeer(targetPeerId);
+                }
+            }, (err) => {
+                console.warn("Snapshot notice:", err);
+            });
+        }
+
+        function connectToPeer(targetPeerId) {
+            const call = state.peer.call(targetPeerId, state.localStream);
+            if (!call) return;
+
+            let connected = false;
+            call.on('stream', (remoteStream) => {
+                connected = true;
+                removeFromMatchmakingQueue();
+                state.currentCall = call;
+                handleConnectedStream(remoteStream);
+            });
+
+            setTimeout(() => {
+                if (!connected && state.isSearching) {
+                    call.close();
+                }
+            }, 3500);
+        }
+
+        async function removeFromMatchmakingQueue() {
+            state.isSearching = false;
+            if (state.queueUnsub) {
+                state.queueUnsub();
+                state.queueUnsub = null;
+            }
+            if (state.myPeerId && state.selectedAge) {
+                try {
+                    const myQueueDoc = doc(db, 'artifacts', appId, 'public', 'data', `queue_${state.selectedAge.replace('+', 'plus')}`, state.myPeerId);
+                    await deleteDoc(myQueueDoc);
+                } catch (e) {}
+            }
+        }
+
+        function handleConnectedStream(remoteStream) {
+            state.isConnected = true;
+            state.isSearching = false;
+            updateUI();
+
+            remoteAudio.srcObject = remoteStream;
+            remoteAudio.play().catch(e => console.warn("Autoplay block", e));
+
+            setAvatarState('connected');
+            chatStatusTitle.textContent = "Собеседник подключен!";
+            chatStatusDesc.textContent = "Вы в эфире. Говорите в микрофон.";
+        }
+
+        function handleDisconnect() {
+            if (state.currentCall) {
+                state.currentCall.close();
+                state.currentCall = null;
+            }
+            remoteAudio.srcObject = null;
+            state.isConnected = false;
+
+            if (!state.isPaused && !state.isSearching) {
+                setAvatarState('idle');
+                chatStatusTitle.textContent = "Разговор завершён";
+                chatStatusDesc.textContent = "Собеседник вышел. Нажмите 'Искать' для следующего.";
+            }
+            updateUI();
+        }
+
+        // Actions
+        function skipPeer() {
+            removeFromMatchmakingQueue();
+            handleDisconnect();
+            startSearch();
+        }
+
+        function pauseSearch() {
+            removeFromMatchmakingQueue();
+            if (state.currentCall) {
+                state.currentCall.close();
+                state.currentCall = null;
+            }
+            state.isConnected = false;
+            state.isSearching = false;
+            state.isPaused = true;
+
+            setAvatarState('paused');
+            chatStatusTitle.textContent = "На паузе";
+            chatStatusDesc.textContent = "Поиск остановлен.";
+            updateUI();
+        }
+
+        function toggleMicrophone() {
+            if (!state.localStream) return;
+            const audioTrack = state.localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                state.isMicMuted = !state.isMicMuted;
+                audioTrack.enabled = !state.isMicMuted;
+
+                if (state.isMicMuted) {
+                    micBtnIcon.className = "fa-solid fa-microphone-slash text-red-500";
+                    micBtnText.textContent = "Микрофон выкл";
+                    btnToggleMic.classList.add('border-red-500/40', 'bg-red-500/10');
+                } else {
+                    micBtnIcon.className = "fa-solid fa-microphone text-emerald-400";
+                    micBtnText.textContent = "Микрофон вкл";
+                    btnToggleMic.classList.remove('border-red-500/40', 'bg-red-500/10');
+                }
+            }
+        }
+
+        function exitToMenu() {
+            pauseSearch();
+
+            if (state.peer) {
+                state.peer.destroy();
+                state.peer = null;
+            }
+
+            if (state.localStream) {
+                state.localStream.getTracks().forEach(t => t.stop());
+                state.localStream = null;
+            }
+
+            state.selectedAge = null;
+            state.isPaused = false;
+
+            screenChat.classList.add('hidden');
+            btnExitMenu.classList.add('hidden');
+            screenAgeSelect.classList.remove('hidden');
+        }
+
+        function setAvatarState(mode) {
+            avatarCircle.className = "w-36 h-36 rounded-full bg-slate-900 border-2 border-slate-800 flex items-center justify-center text-4xl text-slate-600 transition-all duration-500";
+            avatarIcon.className = "fa-solid fa-user-large";
+
+            if (mode === 'searching') {
+                avatarCircle.className = "w-36 h-36 rounded-full bg-brand-600/20 border-2 border-brand-500 text-brand-400 flex items-center justify-center text-4xl pulse-ring transition-all duration-500";
+                avatarIcon.className = "fa-solid fa-spinner animate-spin text-brand-400";
+            } else if (mode === 'connected') {
+                avatarCircle.className = "w-36 h-36 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 flex items-center justify-center text-5xl shadow-2xl shadow-emerald-500/30 transition-all duration-500";
+                avatarIcon.className = "fa-solid fa-volume-high animate-bounce";
+            } else if (mode === 'paused') {
+                avatarCircle.className = "w-36 h-36 rounded-full bg-amber-500/10 border-2 border-amber-500/40 text-amber-400 flex items-center justify-center text-4xl transition-all duration-500";
+                avatarIcon.className = "fa-solid fa-pause";
+            }
+        }
+
+        function updateUI() {
+            btnStartSearch.disabled = state.isSearching || state.isConnected;
+            btnSkip.disabled = !state.isSearching && !state.isConnected;
+            btnPause.disabled = !state.isSearching && !state.isConnected;
+
+            if (state.isSearching || state.isConnected) {
+                btnStartSearch.classList.add('opacity-40');
+            } else {
+                btnStartSearch.classList.remove('opacity-40');
+            }
+        }
+
+        // Listeners
+        btnStartSearch.addEventListener('click', startSearch);
+        btnSkip.addEventListener('click', skipPeer);
+        btnPause.addEventListener('click', pauseSearch);
+        btnToggleMic.addEventListener('click', toggleMicrophone);
+        btnExitMenu.addEventListener('click', exitToMenu);
+        btnExitMenuBottom.addEventListener('click', exitToMenu);
+    </script>
+</body>
+</html>
